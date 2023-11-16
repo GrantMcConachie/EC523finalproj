@@ -10,4 +10,4 @@ Densenet classifies MNIST data with high accuracy.
 
 CS253_ISTA_FISTA.pdf provides a brief review of the FISTA algorithm by referencing recent research. The purpose of the review is to see its feasibility and ease of use with the diffusion models.
 
-
+All of the models use pytorch for implementation. Users can use "pip install torch" to install opensource pytorch packages. 
