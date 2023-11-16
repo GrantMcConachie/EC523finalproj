@@ -6,7 +6,7 @@ This project aims to develop an accurate framework to both predict the severity 
 
 CAE_model.py contains a Convolution AutoEncoder that maps MNIST data images to latent space and generates images of the MNIST dataset. 
 
-Densenet classifies MNIST data with high accuracy.
+DenseNetModel.ipynb has jupyter notebook implementation of densenet. It uses densenet architecture to classify MNIST.
 
 CS253_ISTA_FISTA.pdf provides a brief review of the FISTA algorithm by referencing recent research. The purpose of the review is to see its feasibility and ease of use with the diffusion models.
 
