@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras import layers, models, optimizers
 from sklearn.neighbors import NearestNeighbors
+from scipy.linalg import sqrtm
 
 def class_switch_percent(model_path, original_im, counterfac_im, pred_axis=1):
     """
@@ -18,17 +19,66 @@ def class_switch_percent(model_path, original_im, counterfac_im, pred_axis=1):
         counterfac_im `numpy.ndarray` - sequence of counterfactual images (batch x img_x x img_y x channel)
     """
     densenet = load_model(model_path, compile=False)
-    # densenet.compile(optimizer='adam',
-    #           loss='categorical_crossentropy',
-    #           metrics=['accuracy'])
     correct_class = np.argmax(densenet.predict(original_im), axis=pred_axis)
     switch_class = np.argmax(densenet.predict(counterfac_im), axis=pred_axis)
     p_switch = np.sum(correct_class == switch_class) / original_im.shape[0]
 
     return f"Percentage of images successfully swithced classes {100 * p_switch}%"
 
-def fid():
-    pass
+def fid(original_im, counterfac_im):
+    """
+    calculates the Frechet Inception Distance score which is the distance between
+    vectors calculated for real and generated images. A lower FID indicates better
+    quality images and a higher FID indicates lower quality images. Takes a while 
+    to run.
+
+    Args:
+        original_im `numpy.ndarray` - sequence of original images (batch x img_x x img_y x channel)
+        counterfac_im `numpy.ndarray` - sequence of counterfactual images (batch x img_x x img_y x channel)
+    """
+    # upscale images if less than 75 pixels
+    new_or_img = []
+    new_c_img = []
+    img_shape = original_im[0].shape[0]
+
+    if img_shape < 75:
+        pad_num = round((75-img_shape) / 2)
+        for o_img, c_img in zip(original_im, counterfac_im):
+            new_or_img.append(np.pad(o_img, ((pad_num, pad_num), (pad_num, pad_num), (0, 0)), mode='constant', constant_values=0))
+            new_c_img.append(np.pad(c_img, ((pad_num, pad_num), (pad_num, pad_num), (0, 0)), mode='constant', constant_values=0))
+
+        original_im = np.array(new_or_img)
+        counterfac_im = np.array(new_c_img)
+
+    # Load in the inception v3 network
+    inceptionv3 = tf.keras.applications.inception_v3.InceptionV3(
+        include_top=False, 
+        pooling='avg', 
+        input_shape=original_im[0].shape
+    )
+
+    # Calculating img imbeddings
+    o_img_embed = inceptionv3.predict(original_im)
+    c_img_embed = inceptionv3.predict(counterfac_im)
+
+    # calculate mean and covariance statistics
+    mu1, sigma1 = o_img_embed.mean(axis=0), np.cov(o_img_embed, rowvar=False)
+    mu2, sigma2 = c_img_embed.mean(axis=0), np.cov(c_img_embed, rowvar=False)
+
+    # calculate sum squared difference between means
+    ssdiff = np.sum((mu1 - mu2)**2.0)
+
+    # calculate sqrt of product between cov
+    covmean = sqrtm(sigma1.dot(sigma2))
+
+    # check and correct imaginary numbers from sqrt
+    if np.iscomplexobj(covmean):
+        covmean = covmean.real
+    
+    # calculate score
+    fid = ssdiff + np.trace(sigma1 + sigma2 - 2.0 * covmean)
+
+    return fid
 
 def knn(original_im, counterfac_im):
     """
@@ -92,6 +142,7 @@ if __name__ == '__main__':
     x_test = convert_2d_to_3d(x_test)
 
     # test funcs
-    # class_switch_percent("./test_models/DenseNet_MNIST_tfmodel.h5", x_test, x_test)
-    print(knn(x_train[:10000], x_test))
-    print(knn(x_test, x_test))
+    # print(class_switch_percent("./test_models/DenseNet_MNIST_tfmodel.h5", x_test, x_test))
+    # print(knn(x_train[:10000], x_test))
+    # print(knn(x_test, x_test))
+    print("fid:", fid(x_train[:10000], x_test))
