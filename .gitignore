@@ -1,0 +1,3 @@
+test_models/densenet.h5
+test_models/DenseNet_MNIST_tfmodel.h5
+scratch.py
