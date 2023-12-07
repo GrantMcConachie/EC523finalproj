@@ -35,6 +35,9 @@ def fid(original_im, counterfac_im):
     Args:
         original_im `numpy.ndarray` - sequence of original images (batch x img_x x img_y x channel)
         counterfac_im `numpy.ndarray` - sequence of counterfactual images (batch x img_x x img_y x channel)
+
+    Retuns:
+        fid `float` - fid score between the real images and the counterfactual ones
     """
     # upscale images if less than 75 pixels
     new_or_img = []
