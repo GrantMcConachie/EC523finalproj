@@ -1,3 +1,4 @@
+test_models/
 test_models/densenet.h5
 test_models/DenseNet_MNIST_tfmodel.h5
 scratch.py
@@ -16,4 +17,3 @@ CEM_data/saved_PN/
 CEM_data/saved_PP/
 CEM_data/sudan_cf/
 test_models_ignore/
-test_models/
