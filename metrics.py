@@ -1,6 +1,17 @@
 """
-Functions that calculate metrics for our model
+Functions that calculate metrics for our model. All metrics in paper can be 
+recovered by changing variables `PN_or_PP` and `MNIST_or_BRAIN`. PN_or_PP variable
+does not affect counterfactual instance results. Class switch % varies for 
+counterfactual instances as the models used to calculate them vary.
+
+NOTE: Have to unzip the data files and may have to change the relative directories to
+get the script to run.
+
+@author: Grant
 """
+
+PN_or_PP = "PN" # 'PN' or 'PP'
+MNIST_or_BRAIN = "BRAIN" # 'BRAIN' or 'MNIST
 
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -10,20 +21,28 @@ import numpy as np
 from tensorflow.keras import layers, models, optimizers
 from sklearn.neighbors import NearestNeighbors
 from scipy.linalg import sqrtm
+import os
+from PIL import Image
 
-def class_switch_percent(model_path, original_im, counterfac_im, pred_axis=1):
+def class_switch_percent(model_path, original_im, counterfac_im, pred_axis=1, MNIST_or_BRAIN="BRAIN"):
     """
     Args:
         model_path `str` - path to pretrained DenseNet model (e.g. "./path/to/densenet.h5")
         original_im `numpy.ndarray` - sequence of original images (batch x img_x x img_y x channel)
         counterfac_im `numpy.ndarray` - sequence of counterfactual images (batch x img_x x img_y x channel)
     """
-    densenet = load_model(model_path, compile=False)
+    if MNIST_or_BRAIN == "MNIST":
+        densenet = load_model(model_path, compile=False)
+        densenet.compile(optimizer='adam')
+    elif MNIST_or_BRAIN == "BRAIN":
+        densenet = load_model(model_path, compile=False)
+        densenet.compile(optimizer='adam',
+                                loss=tf.losses.CategoricalCrossentropy())
     correct_class = np.argmax(densenet.predict(original_im), axis=pred_axis)
     switch_class = np.argmax(densenet.predict(counterfac_im), axis=pred_axis)
     p_switch = np.sum(correct_class == switch_class) / original_im.shape[0]
 
-    return f"Percentage of images successfully swithced classes {100 * p_switch}%"
+    return f"Percentage of images successfully swithced classes {100 * (1-p_switch)}%"
 
 def fid(original_im, counterfac_im):
     """
@@ -102,8 +121,8 @@ def knn(original_im, counterfac_im):
     resnet.outputs = [resnet.layers[-1].output]
 
     # Generating codes for all the counterfac and original images
-    or_im_code = np.squeeze(resnet.predict(original_im))
-    count_im_code = np.squeeze(resnet.predict(counterfac_im))
+    or_im_code = resnet.predict(original_im)[:, 0, 0, :]
+    count_im_code = resnet.predict(counterfac_im)[:, 0, 0, :]
 
     # Fitting KNN
     neigh = NearestNeighbors(n_neighbors=1)
@@ -121,7 +140,7 @@ def knn(original_im, counterfac_im):
 
     return f"Percentage of images neareast their counterfactual image: {100 * correct / (incorrect + correct)}%"
     
-def convert_2d_to_3d(images, num_channels=3):
+def convert_2d_to_3d_and_pad(images, num_channels=3):
     """
     Converts a batch of 2d images to 3d images with reeating channels
 
@@ -138,14 +157,140 @@ def convert_2d_to_3d(images, num_channels=3):
 
     return new_images
 
-if __name__ == '__main__':
-    # Load in MNIST, make 3 channeled + pad
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = convert_2d_to_3d(x_train)
-    x_test = convert_2d_to_3d(x_test)
+def convert_2d_to_3d(images, num_channels=3):
+    """
+    Converts a batch of 2d images to 3d images with reeating channels
 
-    # test funcs
-    # print(class_switch_percent("./test_models/DenseNet_MNIST_tfmodel.h5", x_test, x_test))
-    # print(knn(x_train[:10000], x_test))
-    # print(knn(x_test, x_test))
-    print("fid:", fid(x_train[:10000], x_test))
+    Args:
+        images `numpy.ndarray` - set of images to convert (batch x img_x x img_y)
+
+    Returns:
+        new_images `numpy.ndarray` - converted images (batch x img_x x img_y x num_channels)
+    """
+    new_images = np.array([
+        np.repeat(img[:, :, np.newaxis], num_channels, axis=2)
+        for img in images
+    ])
+
+    return new_images
+
+if __name__ == '__main__':
+
+    print("\nCEM:")
+    #########################
+    ########## CEM ##########
+    #########################
+
+    # Load in the data
+    if MNIST_or_BRAIN == "BRAIN":
+        data_dir = "git_folder\\CEM_data\\npy_kaggle\\" 
+    elif MNIST_or_BRAIN == "MNIST" and PN_or_PP == "PP":
+        data_dir = "git_folder\\CEM_data\\saved_PP\\"
+    elif MNIST_or_BRAIN == "MNIST" and PN_or_PP == "PN":
+        data_dir = "git_folder\\CEM_data\\saved_PN\\" 
+
+    MNIST_reg = []
+    MNIST_pp = []
+    brain_reg = []
+    brain_pp = []
+
+    for images in reversed(os.listdir(data_dir)):
+        # check if the image ends with png
+        if "brain" in images:
+            if PN_or_PP in images:
+                try:
+                    img = np.squeeze(np.load(data_dir + images))
+                    brain_pp.append(img)
+                except:
+                    print(images)
+            elif "reg" in images:
+                img = np.squeeze(np.load(data_dir + images))
+                brain_reg.append(img)
+        elif PN_or_PP in images:
+            img = np.squeeze(np.load(data_dir + images, allow_pickle=True))
+            MNIST_pp.append(img)
+        elif "reg" in images:
+            img = np.squeeze(np.load(data_dir + images, allow_pickle=True)) 
+            MNIST_reg.append(img)
+
+    # convert to arrays
+    if MNIST_or_BRAIN == "MNIST":
+        MNIST_reg = np.array(MNIST_reg)
+        MNIST_pp = np.array(MNIST_pp)
+        if PN_or_PP == "PP":
+            MNIST_pp = MNIST_reg - MNIST_pp
+
+    elif MNIST_or_BRAIN == "BRAIN":
+        brain_reg = np.array(brain_reg)
+        brain_pp = np.array(brain_pp)
+        if PN_or_PP == "PP":
+            brain_pp = brain_reg - brain_pp
+
+    # funcs
+    if MNIST_or_BRAIN == "MNIST":
+        print(class_switch_percent("git_folder\\test_models\\mnist_cnn.h5", MNIST_reg, MNIST_pp, MNIST_or_BRAIN=MNIST_or_BRAIN))
+    elif MNIST_or_BRAIN == "BRAIN":
+        print(class_switch_percent("git_folder\\test_models\\kaggle_model.h5", brain_reg, brain_pp, MNIST_or_BRAIN=MNIST_or_BRAIN))
+
+    # adding 3 channels for FID and KNN
+    if MNIST_or_BRAIN == "MNIST":
+        MNIST_pp_3d = convert_2d_to_3d_and_pad(MNIST_pp)
+        MNIST_reg_3d = convert_2d_to_3d_and_pad(MNIST_reg)
+    
+    if MNIST_or_BRAIN == "MNIST":
+        print(knn(MNIST_reg_3d, MNIST_pp_3d))
+        print(fid(MNIST_reg_3d, MNIST_pp_3d))
+    elif MNIST_or_BRAIN == "BRAIN":
+        print(knn(brain_reg, brain_pp))
+        print(fid(brain_reg, brain_pp))
+
+    print("\nCounterfactual instances:")
+    #########################
+    ###### Counterfact ######
+    #########################
+
+    # Load in the data
+    data_dir_MNIST_count = "git_folder\\CEM_data\\counterfactual\\MNIST\\counterfactual_images\\"
+    data_dir_MNIST_org = "git_folder\\CEM_data\\counterfactual\\MNIST\\mnist_images\\"
+    data_dir_brain_count = "git_folder\\CEM_data\\sudan_cf\\counterfactual_images\\"
+    data_dir_brain_org = "git_folder\\CEM_data\\sudan_cf\\original_images\\"
+    MNIST_count = []
+    MNIST_org = []
+    brain_count = []
+    brain_org = []
+    
+    for images in os.listdir(data_dir_MNIST_count):
+        MNIST_count.append(np.asarray(Image.open(data_dir_MNIST_count + images)) / 255)
+
+    for images in os.listdir(data_dir_MNIST_org):
+        MNIST_org.append(np.asarray(Image.open(data_dir_MNIST_org + images)) / 255)
+
+    for images in os.listdir(data_dir_brain_count):
+        brain_count.append(np.asarray(Image.open(data_dir_brain_count + images)) / 255)
+
+    for images in os.listdir(data_dir_brain_org):
+        brain_org.append(np.asarray(Image.open(data_dir_brain_org + images)) / 255)
+
+    MNIST_count = np.squeeze(np.array(MNIST_count)[:, :, :, 0])
+    MNIST_org = np.squeeze(np.array(MNIST_org)[:, :, :, 0])
+    brain_count = convert_2d_to_3d(np.array(brain_count))
+    brain_org = convert_2d_to_3d(np.array(brain_org))
+
+    # % correct
+    if MNIST_or_BRAIN == "MNIST":
+        print(class_switch_percent("git_folder\\test_models\\mnist_cnn.h5", MNIST_org, MNIST_count))
+    elif MNIST_or_BRAIN == "BRAIN":
+        print(class_switch_percent("git_folder\\test_models\\kaggle_model.h5", brain_org, brain_count))
+
+    # adding 3 channels for FID and KNN
+    MNIST_count_3d = convert_2d_to_3d_and_pad(MNIST_count)
+    MNIST_org_3d = convert_2d_to_3d_and_pad(MNIST_org)
+
+    if MNIST_or_BRAIN == "MNIST":
+        print(knn(MNIST_org_3d, MNIST_count_3d))
+        print(fid(MNIST_org_3d, MNIST_count_3d))
+    elif MNIST_or_BRAIN == "BRAIN":
+        print(knn(brain_org, brain_count))
+        print(fid(brain_org, brain_count))
+
+    print("complete")

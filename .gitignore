@@ -1,3 +1,19 @@
 test_models/densenet.h5
 test_models/DenseNet_MNIST_tfmodel.h5
 scratch.py
+test_models/brain_cnn_non.h5
+test_models/brain_cnn.h5
+test_models/brain_cnn.zip
+test_models/mnist_ae.h5
+test_models/mnist_cnn_count.h5
+test_models/mri_cnn_count.h5
+CEM_data/brain_non/
+CEM_data/counterfactual/
+CEM_data/no PP/
+CEM_data/no PP non/
+CEM_data/npy_kaggle/
+CEM_data/saved_PN/
+CEM_data/saved_PP/
+CEM_data/sudan_cf/
+test_models_ignore/
+test_models/
