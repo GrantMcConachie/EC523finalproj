@@ -27,5 +27,5 @@ pip install tensorflow[alibi]
 # Install omnixai
 pip install omnixai
 
-##Acknowledgements
+## Acknowledgements
 This project is part of the EC523 coursework at Boston University. We extend our gratitude to our professors and teaching assistants for their invaluable guidance and support.
