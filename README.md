@@ -1,13 +1,30 @@
-# EC523finalproj
+EC523 Final Project: Counterfactual Image Generation of Alzheimer's Disease MRI Images
+Overview
+This project is dedicated to developing a framework capable of predicting Alzheimer's Disease (AD) severity and generating counterfactual samples using low-resolution MRI images. Utilizing Convolutional Neural Network (CNN) architectures, the project validates model efficacy on the MNIST dataset before applying the same architecture for brain image classification. The generation of counterfactual instances is achieved using the Contrastive Explanation Method (CEM), pushing images across different classes for further analysis.
 
-## Counterfactual Image Generation of Alzheimer's Disease MRI Images
+Objectives
+Predict disease states from low-resolution MRI images (2D structural MRI images, 176 x 208).
+Identify brain areas responsible for AD.
+Validate and compare the model with existing methods and accuracy metrics.
+Repository Contents
+CAE_MNIST_model.ipynb: Jupyter notebook implementing a Convolutional Autoencoder for the MNIST dataset.
+CAE_MNIST_model.h5: Trained model file.
+CEM_brain.py, CEM_MNIST.py: Python scripts for implementing the Contrastive Explanation Method.
+DenseNetModel.ipynb: Jupyter notebook providing DenseNet architecture for both MNIST and brain image datasets.
+Inceptionv3_model.py: Implementation of Inception V3 architecture.
+cf_MRI_kaggle.ipynb: Jupyter notebook for applying counterfactual methods to the MRI dataset using a new CNN architecture and the omnixai library.
+cf_mnist.ipynb: Jupyter notebook for applying counterfactual methods to the MNIST dataset using the alibi library.
+metrics.py: Python script for the implementation and calculation of metrics used in the final report.
+Installation Instructions
+To install the necessary packages, run the following commands:
 
-This project aims to develop an accurate framework to both predict the severity of AD and generate counterfactual samples using low-resolution MRI images. The model will consist of a convolutional Autoencoder (CAE) classifier as well as a diffusion model. The model will be able to predict disease states from low-resolution images and give insight into areas of the brain that are responsible for AD. We will use 2D structural MRI images (176 x 208), as shown in Figure 1, to train the model. The model will be evaluated by comparing it to previous work and with accuracy metrics. In addition, the project aims to train dense net and CAE on the MNIST model to validate its accuracy and then also train on MRI images. Diffusion model on MNIST and MRI images will produce counterfactual examples.
+bash
+Copy code
+# Install Alibi library
+pip install tensorflow[alibi]
 
-CAE_model.py contains a Convolution AutoEncoder that maps MNIST data images to latent space and generates images of the MNIST dataset. 
+# Install omnixai
+pip install omnixai
+Acknowledgements
+This project is part of the EC523 coursework at [University Name]. We extend our gratitude to our professors and colleagues for their invaluable guidance and support.
 
-DenseNetModel.ipynb has jupyter notebook implementation of densenet. It uses densenet architecture to classify MNIST.
-
-CS253_ISTA_FISTA.pdf provides a brief review of the FISTA algorithm by referencing recent research. The purpose of the review is to see its feasibility and ease of use with the diffusion models.
-
-All of the models use pytorch for implementation. Users can use "pip install torch" to install opensource pytorch packages. 
